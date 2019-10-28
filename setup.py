@@ -53,7 +53,7 @@ setup(
     description="A grpc plugin for interservice communications for insanic.",
     entry_points={
         'console_scripts': [
-            'interstellar=interstellar.cli:main',
+            'interstellar=interstellar.cli:cli',
         ],
     },
     install_requires=requirements,
