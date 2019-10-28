@@ -1,8 +1,5 @@
-import jwt
-
 from grpclib.exceptions import GRPCError, Status
 
-from insanic.authentication.handlers import jwt_service_decode_handler
 from insanic.conf import settings
 from insanic.models import User, RequestService
 
@@ -21,18 +18,19 @@ class GRPCAuthentication:
     def auth_header_prefix(self):
         return settings.JWT_SERVICE_AUTH['JWT_AUTH_HEADER_PREFIX'].lower()
 
-    def get_jwt_value(self):
-        auth = self.metadata.get('authorization', b'').split()
-
-        if not auth or str(auth[0].lower()) != self.auth_header_prefix:
+    def get_service(self):
+        try:
+            request_service = self.metadata[settings.INTERNAL_REQUEST_SERVICE_HEADER.lower()]
+        except KeyError:
             return None
+        else:
+            service_params = {}
 
-        if len(auth) == 1:
-            self._raise('No credentials provided.')
-        elif len(auth) > 2:
-            self._raise("Credentials should not contain spaces.")
-
-        return {"token": auth[1]}
+            for f in request_service.split(';'):
+                if f:
+                    k, v = f.split('=')
+                    service_params.update({k: v})
+            return service_params
 
     def get_user(self):
 
@@ -56,13 +54,11 @@ class GRPCAuthentication:
 
         user = User(**user_params)
 
-        jwt_value = self.get_jwt_value()
-        if jwt_value is None:
-            self._raise("Request token not found in request.")
+        service_params = self.get_service()
+        if service_params is None:
+            self._raise("Request service not found in request.")
 
-        payload = self.try_decode_jwt(**jwt_value)
-
-        service = RequestService(is_authenticated=True, **payload)
+        service = RequestService(is_authenticated=True, **service_params)
 
         if not service.is_valid:
             self._raise(f"Invalid request to {settings.SERVICE_NAME}")
@@ -73,12 +69,3 @@ class GRPCAuthentication:
         raise GRPCError(Status.UNAUTHENTICATED,
                         self.error_message if self.error_message else "Unknown Authorization Error.")
 
-    def try_decode_jwt(self, **jwt_value):
-        try:
-            payload = jwt_service_decode_handler(**jwt_value)
-        except jwt.DecodeError:
-            self._raise("Error decoding signature.")
-        except jwt.InvalidTokenError:
-            self._raise("Invalid token.")
-        else:
-            return payload
