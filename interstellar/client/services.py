@@ -1,3 +1,5 @@
+import random
+import os
 from grpclib.client import Channel
 
 from insanic.conf import settings
@@ -34,8 +36,24 @@ def grpc_interface(self, namespace, stub_name, service_method_name=None, *, regi
     )
 
 
+class Channels:
+    channels = {}
+
+    @classmethod
+    def get_channel(self, service_name, host, port):
+        if len(self.channels.get(service_name, [])) < settings.INTERSTELLAR_CLIENT_CHANNEL_COUNT:
+            if service_name not in self.channels:
+                self.channels[service_name] = []
+            channel = Channel(host=host, port=port)
+            attach_events(channel)
+            self.channels[service_name].append(channel)
+            return channel
+        return random.choice(self.channels[service_name])
+
+
 class GRPCBindContext:
-    __slots__ = ('registry', 'service', 'namespace', 'stub_name', 'service_method_name', 'stub_class', 'stub')
+    __slots__ = ('registry', 'service', 'namespace', 'stub_name', 'service_method_name', 'stub_class', 'stub',)
+
 
     def __init__(self, registry, service: 'Service', namespace: str, stub_name: str, service_method_name: str = None):
         self.registry = registry
@@ -45,33 +63,28 @@ class GRPCBindContext:
         self.service_method_name = service_method_name
         self.stub_class = registry.get_stub(service.service_name, namespace, stub_name, service_method_name)
 
-    def _get_channel(self):
-        channel = Channel(host=self.service.host, port=self.service.port)
-        attach_events(channel)
-        return channel
-
-    def _wrap_service_authorization(self):
-        for method in self.registry.service_methods[
-            (
-                    self.service.service_name,
-                    self.namespace,
-                    self.stub_name
-            )
-        ]:
-            setattr(
-                self.stub,
-                method,
-                MetadataInjector(
-                    getattr(self.stub, method),
-                    self.service.service_token
-                )
-            )
+    # def _wrap_service_authorization(self):
+    #     for method in self.registry.service_methods[
+    #         (
+    #                 self.service.service_name,
+    #                 self.namespace,
+    #                 self.stub_name
+    #         )
+    #     ]:
+    #         setattr(
+    #             self.stub,
+    #             method,
+    #             MetadataInjector(
+    #                 getattr(self.stub, method),
+    #                 self.service.service_token
+    #             )
+    #         )
 
     def __enter__(self):
-        channel = self._get_channel()
+        channel = Channels.get_channel(self.service.service_name, self.service.host, self.service.port)
 
         self.stub = self.stub_class(channel)
-        self._wrap_service_authorization()
+        # self._wrap_service_authorization()
 
         if self.service_method_name:
             return getattr(self.stub, self.service_method_name)
