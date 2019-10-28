@@ -36,22 +36,9 @@ class InterstellarClient(AbstractPlugin):
     @classmethod
     def client_registration(cls):
         for service in settings.SERVICE_CONNECTIONS:
-            packages = cls.grpc_packages(service)
+            packages = cls.registry.scan_grpc_packages(service)
             #     attach stubs to service object
             cls.registry.register(packages)
-
-    @classmethod
-    def grpc_packages(self, service_name=None):
-        import pkg_resources
-        all_grpc_client_packages = [p.key for p in pkg_resources.working_set if p.key.startswith('grpc-')]
-
-        if service_name:
-            # to include extra '-' at the end
-            search_packages = ['grpc', service_name, '']
-            search_for = "-".join(search_packages)
-            return [p for p in all_grpc_client_packages if p.startswith(search_for)]
-        else:
-            return all_grpc_client_packages
 
     @classmethod
     def bind_grpc_interface(cls):

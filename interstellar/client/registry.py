@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import pkg_resources
 
 from collections import namedtuple
 from typing import Collection
@@ -30,6 +31,18 @@ class StubRegistry():
         self.stubs = {}
         self.service_methods = {}
 
+    def scan_grpc_packages(self, service_name=None):
+
+        all_grpc_client_packages = [p.key for p in pkg_resources.working_set if p.key.startswith('grpc-')]
+
+        if service_name:
+            # to include extra '-' at the end
+            search_packages = ['grpc', service_name, '']
+            search_for = "-".join(search_packages)
+            return [p for p in all_grpc_client_packages if p.startswith(search_for)]
+        else:
+            return all_grpc_client_packages
+
     def register(self, packages: Collection[str]):
         """
         Loads stubs from modules
@@ -41,7 +54,7 @@ class StubRegistry():
         for package_name in packages:
             self._load_package(package_name)
 
-    def _load_package(self, package_name: str) -> dict:
+    def _load_package(self, package_name: str) -> None:
         """
         loads the package name
 
@@ -95,3 +108,4 @@ class StubRegistry():
                                            f"Please check the protobuf definition.")
 
         return self.stubs[service_name][namespace][stub_name]
+
