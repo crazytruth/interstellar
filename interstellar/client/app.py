@@ -4,8 +4,8 @@ from insanic import Insanic
 from insanic.conf import settings
 from insanic.services import Service
 
+from interstellar import config as interstellar_common_config
 from interstellar.abstracts import AbstractPlugin
-
 from interstellar.client import config as client_config
 from interstellar.client.registry import StubRegistry
 from interstellar.client.services import grpc_interface
@@ -26,6 +26,9 @@ class InterstellarClient(AbstractPlugin):
         :param app:
         :return:
         """
+
+        # load common interstellar configs
+        cls._load_config(settings, interstellar_common_config)
 
         # load client specific interstellar configs
         cls.load_config(settings, client_config)

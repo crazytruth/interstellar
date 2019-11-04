@@ -58,7 +58,10 @@ class GRPCAuthentication:
         if service_params is None:
             self._raise("Request service not found in request.")
 
-        service = RequestService(is_authenticated=True, **service_params)
+        try:
+            service = RequestService(is_authenticated=True, **service_params)
+        except TypeError:
+            self._raise("Invalid service payload.")
 
         if not service.is_valid:
             self._raise(f"Invalid request to {settings.SERVICE_NAME}")

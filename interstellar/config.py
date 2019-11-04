@@ -1,0 +1,2 @@
+INTERSTELLAR_INSANIC_ERROR_CODE_HEADER = 'grpc-error-code'
+INTERNAL_REQUEST_SERVICE_HEADER = "x-insanic-request-service"

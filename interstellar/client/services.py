@@ -1,10 +1,9 @@
 import random
-import os
-from grpclib.client import Channel
 
 from insanic.conf import settings
 
 from interstellar.client.events import attach_events
+from interstellar.client.channels import InterstellarChannel
 
 
 class MetadataInjector:
@@ -44,7 +43,7 @@ class Channels:
         if len(self.channels.get(service_name, [])) < settings.INTERSTELLAR_CLIENT_CHANNEL_COUNT:
             if service_name not in self.channels:
                 self.channels[service_name] = []
-            channel = Channel(host=host, port=port)
+            channel = InterstellarChannel(host=host, port=port)
             attach_events(channel)
             self.channels[service_name].append(channel)
             return channel

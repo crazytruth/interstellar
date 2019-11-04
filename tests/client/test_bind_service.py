@@ -44,8 +44,7 @@ class TestBindService:
 
         with service.grpc('monkey', 'ApeService', 'GetChimpanzee') as method:
             assert method
-            assert isinstance(method, MetadataInjector)
-            assert isinstance(method.func, ServiceMethod)
+            assert isinstance(method, ServiceMethod)
 
     def test_bind_error(self):
         service = Service('test')

@@ -5,8 +5,10 @@ from grpclib.server import Server
 from insanic.app import Insanic
 from insanic.conf import settings
 
+from interstellar import config as interstellar_common_config
 from interstellar.abstracts import AbstractPlugin
 from interstellar.server import config
+from interstellar.server.server import GRPCServer
 from interstellar.utils import load_class
 
 
@@ -27,6 +29,9 @@ class InterstellarServer(AbstractPlugin):
         :return:
         """
 
+        # load common interstellar configs
+        cls._load_config(settings, interstellar_common_config)
+
         cls.load_config(settings, config)
 
         for s in app.config.INTERSTELLAR_SERVERS:
@@ -41,7 +46,7 @@ class InterstellarServer(AbstractPlugin):
         if len(cls.base_beacons):
             # only need to initialize grpc servers if there are actual servers to run
             cls.health_beacons = {s: [ServiceStatus()] for s in cls.base_beacons}
-            cls.warp_beacon = Server(cls.base_beacons + [Health(cls.health_beacons)])
+            cls.warp_beacon = GRPCServer(cls.base_beacons + [Health(cls.health_beacons)])
 
             # attach start stop listeners
             cls.attach_listeners(app)
@@ -60,7 +65,7 @@ class InterstellarServer(AbstractPlugin):
             if app.config.INTERSTELLAR_SERVER_ENABLED:
                 await cls.start(loop=loop)
             else:
-                cls.logger("info", f"GRPC_SERVE is turned off")
+                cls.logger("info", f"INTERSTELLAR_SERVER_ENABLED is turned off")
 
         @app.listener('before_server_stop')
         async def before_server_stop_stop_grpc(app, loop=None, **kwargs):
@@ -106,7 +111,6 @@ class InterstellarServer(AbstractPlugin):
 
         :return:
         """
-        from grpclib.utils import graceful_exit
 
         cls.logger('info', f"Closing GRPC.")
         if cls.warp_beacon is not None:

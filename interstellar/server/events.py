@@ -9,38 +9,42 @@ async def interstellar_server_event_recv_request(event: RecvRequest):
     try:
         user, service = authentication.authenticate()
     except GRPCError as e:
+        # todo: logging
         event.interrupt()
     else:
         event.metadata.update({"request_user": user})
         event.metadata.update({"request_service": service})
-    finally:
-        event.metadata.update({"auth": authentication})
 
-    print("interstellar_server_event_recv_request")
-
+    # print("interstellar_server_event_recv_request")
+    pass
 
 async def interstellar_server_event_send_initial_metadata(event: SendInitialMetadata):
-    print("interstellar_server_event_send_initial_metadata")
+    # print("interstellar_server_event_send_initial_metadata")
+    pass
 
 
 async def interstellar_server_event_send_trailing_metadata(event: SendTrailingMetadata):
-    print("interstellar_server_event_send_trailing_metadata")
+    # print("interstellar_server_event_send_trailing_metadata")
+    pass
 
 
 async def interstellar_server_event_send_message(event: SendMessage):
-    print('interstellar_server_event_send_message')
+    # print('interstellar_server_event_send_message')
+    pass
 
 
 async def interstellar_server_event_recv_message(event: RecvMessage):
-    print('interstellar_server_event_recv_message')
+    # print('interstellar_server_event_recv_message')
+    pass
 
 
 def attach_events(server):
     listen(server, RecvRequest, interstellar_server_event_recv_request)
-    listen(server, SendInitialMetadata, interstellar_server_event_send_initial_metadata)
-    listen(server, SendTrailingMetadata, interstellar_server_event_send_trailing_metadata)
-    listen(server, SendMessage, interstellar_server_event_send_message)
-    listen(server, RecvMessage, interstellar_server_event_recv_message)
+    # listen(server, SendInitialMetadata, interstellar_server_event_send_initial_metadata)
+    # listen(server, SendTrailingMetadata, interstellar_server_event_send_trailing_metadata)
+    # listen(server, SendMessage, interstellar_server_event_send_message)
+    # listen(server, RecvMessage, interstellar_server_event_recv_message)
+    pass
 
 # events are called in this order
 # interstellar_client_event_send_request

@@ -66,22 +66,4 @@ class TestClientEvents:
         assert "date" in event.metadata
         assert "ip" in event.metadata
 
-    async def test_service_token_injection(self, insanic_application, monkeypatch, test_server):
-        monkeypatch.setattr(settings, 'SERVICE_CONNECTIONS', ['test'])
 
-        InterstellarClient.init_app(insanic_application)
-        service = Service('test')
-
-        monkeypatch.setattr(service, 'host', test_server.host)
-        monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
-
-        async def event_assertion(event):
-            assert "authorization" in event.metadata
-            assert event.metadata['authorization'].endswith(service.service_token)
-
-        with service.grpc('monkey', 'ApeService', 'GetChimpanzee') as method:
-            listen(method.func.channel, SendRequest, event_assertion)
-            request = method.request_type(id="1", include='sound')
-            reply = await method(request)
-            assert reply.id == 1
-            assert reply.extra == "woo woo ahh ahh"

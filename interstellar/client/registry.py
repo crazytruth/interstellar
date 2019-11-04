@@ -2,27 +2,11 @@ import importlib
 import inspect
 import pkg_resources
 
-from collections import namedtuple
 from typing import Collection
-
-from grpclib.client import ServiceMethod
 
 from insanic.exceptions import ImproperlyConfigured
 
-
-def is_grpc_module(m):
-    return inspect.ismodule(m) and m.__name__.startswith('grpc_')
-
-
-def is_stub(m):
-    return inspect.isclass(m) and not inspect.isabstract(m) and m.__name__.endswith('Stub')
-
-
-def is_service_method(m):
-    return isinstance(m, ServiceMethod)
-
-
-GRPCStubMethod = namedtuple('GRPCStubMethod', ['stub_class', 'method'])
+from interstellar.client.utils import is_grpc_module, is_service_method, is_stub
 
 
 class StubRegistry():
@@ -78,6 +62,7 @@ class StubRegistry():
             self.stubs[service][namespace] = {}
 
         for class_name, StubClass in inspect.getmembers(module, is_stub):
+
             self.stubs[service][namespace].update({class_name: StubClass})
 
             for stub_name, service_method in inspect.getmembers(StubClass(None), is_service_method):
@@ -88,7 +73,15 @@ class StubRegistry():
 
                 self.service_methods[composite_key].append(stub_name)
 
-    def get_stub(self, service_name, namespace, stub_name, service_method_name=None):
+    def get_stub(self, service_name: str, namespace: str, stub_name: str, service_method_name: str = None):
+        """
+
+        :param service_name:
+        :param namespace:
+        :param stub_name:
+        :param service_method_name:
+        :return:
+        """
         if not service_name in self.stubs:
             raise ImproperlyConfigured(f"No packages have been installed for service {service_name}.")
 
@@ -108,4 +101,3 @@ class StubRegistry():
                                            f"Please check the protobuf definition.")
 
         return self.stubs[service_name][namespace][stub_name]
-
