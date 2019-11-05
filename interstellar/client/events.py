@@ -8,6 +8,8 @@ from insanic.models import to_header_value, RequestService
 from insanic.services.utils import context_user, context_correlation_id
 from insanic.utils.datetime import get_utc_datetime
 
+from insanic.scopes import get_my_ip
+
 
 async def interstellar_client_event_send_request(event: SendRequest) -> None:
     """
@@ -27,8 +29,7 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
     service = dict(
         source=settings.SERVICE_NAME,
         aud="",  # todo
-        # source_ip=socket.gethostbyname(socket.gethostname()), #todo
-        source_ip='127.0.0.1',
+        source_ip=get_my_ip(),
         destination_version="0.0.1",
     )
     try:
@@ -52,51 +53,51 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
     pass
 
 
-async def interstellar_client_event_send_message(event: SendMessage) -> None:
-    """
-    https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.SendMessage
-
-    :param event.message: (mutable) - message to send
-    :return:
-    """
-    # print('interstellar_client_event_send_message')
-    pass
-
-
-async def interstellar_client_event_recv_message(event: RecvMessage) -> None:
-    """
-    https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvMessage
-
-    :param event.message: (mutable) - received message
-    :return:
-    """
-    # print('interstellar_client_event_recv_message')
-    pass
-
-async def interstellar_client_event_recv_initial_metadata(event: RecvInitialMetadata) -> None:
-    """
-    Dispatches after headers with initial metadata were received from the server
-
-    https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvInitialMetadata
-
-    :param event.metadata: (mutable) initial metadata
-    :return:
-    """
-    # print("interstellar_client_event_recv_initial_metadata")
-    pass
+# async def interstellar_client_event_send_message(event: SendMessage) -> None:
+#     """
+#     https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.SendMessage
+#
+#     :param event.message: (mutable) - message to send
+#     :return:
+#     """
+#     # print('interstellar_client_event_send_message')
+#     pass
 
 
-async def interstellar_client_event_recv_trailing_metadata(event: RecvTrailingMetadata):
-    """
-    Dispatches after trailers with trailing metadata were received from the server
+# async def interstellar_client_event_recv_message(event: RecvMessage) -> None:
+#     """
+#     https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvMessage
+#
+#     :param event.message: (mutable) - received message
+#     :return:
+#     """
+#     # print('interstellar_client_event_recv_message')
+#     pass
 
-    https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvTrailingMetadata
+# async def interstellar_client_event_recv_initial_metadata(event: RecvInitialMetadata) -> None:
+#     """
+#     Dispatches after headers with initial metadata were received from the server
+#
+#     https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvInitialMetadata
+#
+#     :param event.metadata: (mutable) initial metadata
+#     :return:
+#     """
+#     # print("interstellar_client_event_recv_initial_metadata")
+#     pass
 
-    :param event.metadata: (mutable) trailing metadata
-    :return:
-    """
-    # print("interstellar_client_event_recv_trailing_metadata")
-    pass
+
+# async def interstellar_client_event_recv_trailing_metadata(event: RecvTrailingMetadata):
+#     """
+#     Dispatches after trailers with trailing metadata were received from the server
+#
+#     https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.RecvTrailingMetadata
+#
+#     :param event.metadata: (mutable) trailing metadata
+#     :return:
+#     """
+#     # print("interstellar_client_event_recv_trailing_metadata")
+#     pass
 
 
 def attach_events(channel):

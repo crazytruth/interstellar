@@ -18,24 +18,25 @@ async def interstellar_server_event_recv_request(event: RecvRequest):
     # print("interstellar_server_event_recv_request")
     pass
 
-async def interstellar_server_event_send_initial_metadata(event: SendInitialMetadata):
-    # print("interstellar_server_event_send_initial_metadata")
-    pass
 
-
-async def interstellar_server_event_send_trailing_metadata(event: SendTrailingMetadata):
-    # print("interstellar_server_event_send_trailing_metadata")
-    pass
-
-
-async def interstellar_server_event_send_message(event: SendMessage):
-    # print('interstellar_server_event_send_message')
-    pass
-
-
-async def interstellar_server_event_recv_message(event: RecvMessage):
-    # print('interstellar_server_event_recv_message')
-    pass
+# async def interstellar_server_event_send_initial_metadata(event: SendInitialMetadata):
+#     # print("interstellar_server_event_send_initial_metadata")
+#     pass
+#
+#
+# async def interstellar_server_event_send_trailing_metadata(event: SendTrailingMetadata):
+#     # print("interstellar_server_event_send_trailing_metadata")
+#     pass
+#
+#
+# async def interstellar_server_event_send_message(event: SendMessage):
+#     # print('interstellar_server_event_send_message')
+#     pass
+#
+#
+# async def interstellar_server_event_recv_message(event: RecvMessage):
+#     # print('interstellar_server_event_recv_message')
+#     pass
 
 
 def attach_events(server):
@@ -44,7 +45,6 @@ def attach_events(server):
     # listen(server, SendTrailingMetadata, interstellar_server_event_send_trailing_metadata)
     # listen(server, SendMessage, interstellar_server_event_send_message)
     # listen(server, RecvMessage, interstellar_server_event_recv_message)
-    pass
 
 # events are called in this order
 # interstellar_client_event_send_request
