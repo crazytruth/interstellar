@@ -32,11 +32,8 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
         source_ip=get_my_ip(),
         destination_version="0.0.1",
     )
-    try:
-        service = to_header_value(service)
-    except TypeError:
-        # need this because __iter__ for RequestService was added in insanic 0.8.3
-        service = ";".join([f"{k}={v}" for k, v in dict(user).items()])
+
+    service = to_header_value(service)
 
     event.metadata.update({settings.INTERNAL_REQUEST_SERVICE_HEADER.lower(): service})
 
