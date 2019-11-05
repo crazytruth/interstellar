@@ -14,7 +14,7 @@ with open('HISTORY.rst') as history_file:
 version = '0.1.0.dev0'
 
 requirements = [
-    'insanic>=0.8.1',
+    'insanic>=0.8.3',
     'grpclib>=0.3.0',
     'grpcio-tools',
     'googleapis-common-protos',

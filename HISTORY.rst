@@ -7,3 +7,4 @@ History
 
 * CHORE: commented out unused event code
 * CHORE: no coverage on logs
+* MAJOR: increase insanic requirement to 0.8.3 for optimization
