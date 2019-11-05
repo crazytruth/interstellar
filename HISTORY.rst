@@ -6,3 +6,4 @@ History
 ------------------
 
 * CHORE: commented out unused event code
+* CHORE: no coverage on logs
