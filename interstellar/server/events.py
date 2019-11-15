@@ -1,7 +1,13 @@
+from functools import partial
+
 from grpclib.events import RecvRequest, SendInitialMetadata, SendTrailingMetadata, SendMessage, RecvMessage, listen
 from grpclib.exceptions import GRPCError, Status
 
 from interstellar.server.authentication import GRPCAuthentication
+
+
+async def raise_grpc_error(stream, e):
+    raise e
 
 
 async def interstellar_server_event_recv_request(event: RecvRequest):
@@ -9,14 +15,11 @@ async def interstellar_server_event_recv_request(event: RecvRequest):
     try:
         user, service = authentication.authenticate()
     except GRPCError as e:
-        # todo: logging
+        event.method_func = partial(raise_grpc_error, e=e)
         event.interrupt()
     else:
         event.metadata.update({"request_user": user})
         event.metadata.update({"request_service": service})
-
-    # print("interstellar_server_event_recv_request")
-    pass
 
 
 # async def interstellar_server_event_send_initial_metadata(event: SendInitialMetadata):
@@ -26,7 +29,7 @@ async def interstellar_server_event_recv_request(event: RecvRequest):
 #
 # async def interstellar_server_event_send_trailing_metadata(event: SendTrailingMetadata):
 #     # print("interstellar_server_event_send_trailing_metadata")
-#     pass
+#
 #
 #
 # async def interstellar_server_event_send_message(event: SendMessage):

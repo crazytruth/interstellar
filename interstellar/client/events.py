@@ -1,6 +1,6 @@
 import aiotask_context
-import socket
 
+from functools import partial
 from grpclib.events import listen, SendMessage, RecvMessage, SendRequest, RecvInitialMetadata, RecvTrailingMetadata
 
 from insanic.conf import settings
@@ -11,7 +11,7 @@ from insanic.utils.datetime import get_utc_datetime
 from insanic.scopes import get_my_ip
 
 
-async def interstellar_client_event_send_request(event: SendRequest) -> None:
+async def interstellar_client_event_send_request(event: SendRequest, service_name: str) -> None:
     """
     https://grpclib.readthedocs.io/en/latest/events.html#grpclib.events.SendRequest
 
@@ -28,7 +28,7 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
 
     service = dict(
         source=settings.SERVICE_NAME,
-        aud="",  # todo
+        aud=service_name,
         source_ip=get_my_ip(),
         destination_version="0.0.1",
     )
@@ -36,7 +36,6 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
     service = to_header_value(service)
 
     event.metadata.update({settings.INTERNAL_REQUEST_SERVICE_HEADER.lower(): service})
-
 
     # inject correlation_id to headers
     correlation_id = context_correlation_id()
@@ -47,7 +46,6 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
     # inject ip
     remote_addr = aiotask_context.get(settings.TASK_CONTEXT_REMOTE_ADDR, "unknown")
     event.metadata.update({"ip": remote_addr})
-    pass
 
 
 # async def interstellar_client_event_send_message(event: SendMessage) -> None:
@@ -97,15 +95,14 @@ async def interstellar_client_event_send_request(event: SendRequest) -> None:
 #     pass
 
 
-def attach_events(channel):
+def attach_events(channel, service_name=""):
     # common events
     # listen(channel, SendMessage, interstellar_client_event_send_message)
     # listen(channel, RecvMessage, interstellar_client_event_recv_message)
     # client side events
-    listen(channel, SendRequest, interstellar_client_event_send_request)
+    listen(channel, SendRequest, partial(interstellar_client_event_send_request, service_name=service_name))
     # listen(channel, RecvInitialMetadata, interstellar_client_event_recv_initial_metadata)
     # listen(channel, RecvTrailingMetadata, interstellar_client_event_recv_trailing_metadata)
-    pass
 
 # events are called in this order
 # interstellar_client_event_send_request

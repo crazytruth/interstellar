@@ -67,8 +67,3 @@ class GRPCAuthentication:
             self._raise(f"Invalid request to {settings.SERVICE_NAME}")
 
         return user, service
-
-    async def authentication_error_handler(self, stream):
-        raise GRPCError(Status.UNAUTHENTICATED,
-                        self.error_message if self.error_message else "Unknown Authorization Error.")
-

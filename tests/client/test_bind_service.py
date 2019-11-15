@@ -7,7 +7,6 @@ from insanic.exceptions import ImproperlyConfigured
 from insanic.services import Service
 
 from interstellar.client import InterstellarClient
-from interstellar.client.services import MetadataInjector
 
 
 class TestBindService:

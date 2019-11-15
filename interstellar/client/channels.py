@@ -1,4 +1,5 @@
-import asyncio
+import random
+
 from typing import Optional, Type, Dict
 
 from grpclib.client import Channel, Stream, MultiDict, cast
@@ -8,22 +9,31 @@ from grpclib.stream import _RecvType, _SendType
 from grpclib.metadata import Deadline, _MetadataLike, _Metadata
 
 from insanic.conf import settings
+from interstellar.client.events import attach_events
 from interstellar.exceptions import InterstellarError
+
+
+class ChannelPool:
+    channels = {}
+
+    @classmethod
+    def get_channel(cls, service_name, host, port):
+        if len(cls.channels.get(service_name, [])) < settings.INTERSTELLAR_CLIENT_CHANNEL_COUNT:
+            if service_name not in cls.channels:
+                cls.channels[service_name] = []
+            channel = InterstellarChannel(host=host, port=port)
+            attach_events(channel, service_name)
+            cls.channels[service_name].append(channel)
+            return channel
+        return random.choice(cls.channels[service_name])
+
+    @classmethod
+    def reset(cls):
+        cls.channels = {}
 
 
 class InterstellarStream(Stream):
 
-    # def _raise_for_status(self, headers_map: Dict[str, str]) -> None:
-    #     try:
-    #         super()._raise_for_status(headers_map)
-    #     except GRPCError as e:
-    #         raise
-    #
-    # def _raise_for_grpc_status(self, headers_map: Dict[str, str]):
-    #     try:
-    #         super()._raise_for_grpc_status(headers_map)
-    #     except GRPCError as e:
-    #         raise
     async def recv_initial_metadata(self) -> None:
 
         try:
@@ -38,8 +48,7 @@ class InterstellarStream(Stream):
         try:
             super()._raise_for_grpc_status(headers_map)
         except GRPCError as e:
-            error_code = headers_map.get(settings.INTERSTELLAR_INSANIC_ERROR_CODE_HEADER, None)
-            raise InterstellarError(status=e.status, message=e.message, error_code=error_code)
+            raise InterstellarError(status=e.status, message=e.message)
 
 
 class InterstellarChannel(Channel):

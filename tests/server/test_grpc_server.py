@@ -1,236 +1,112 @@
 import pytest
+import ujson as json
 
+from grpclib.const import Status
+
+from insanic import Insanic
 from insanic.conf import settings
+from insanic.loading import get_service
 
-from interstellar import config as common_config
-from interstellar.server import InterstellarServer, config as server_config
-from interstellar.server.log import interstellar_server_error_log
-from interstellar.server.server import interstellar_request_handler
-
-from grpclib.encoding.proto import ProtoCodec
+from interstellar.exceptions import InterstellarError
+from interstellar.logging import get_formatter
+from interstellar.client import InterstellarClient
+from interstellar.server import InterstellarServer
 
 
-class TestRequestHandlerErrors:
-
-    @pytest.fixture(autouse=True)
-    def load_settings(self):
-        InterstellarServer.load_config(settings, common_config)
-        InterstellarServer.load_config(settings, server_config)
-
+class TestGRPCServer:
     @pytest.fixture()
-    def mock_h2_stream(self):
-        class MockStream:
-            closable = False
+    def test_server(self, test_server, loop, monkeypatch):
+        monkeypatch.setattr(settings, 'INTERSTELLAR_SERVERS', ['tests.blackhole.PlanetOfTheApes',
+                                                               'tests.blackhole.PlanetOfTheMonkeys'], raising=False)
+        monkeypatch.setattr(settings, 'INTERSTELLAR_SERVER_PORT_DELTA', 1, raising=False)
 
-            async def send_headers(self, headers, end_stream):
-                pass
+        server = Insanic('test')
+        InterstellarServer.init_app(server)
 
-        return MockStream()
+        return loop.run_until_complete(test_server(server))
 
-    async def test_method_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "GET")]
+    async def test_access_logging_on_success(self, insanic_application, monkeypatch, test_server, caplog):
+        monkeypatch.setattr(settings, 'INTERSTELLAR_SERVERS', ["tests.blackhole.PlanetOfTheApes"], raising=False)
+        monkeypatch.setattr(settings, 'SERVICE_CONNECTIONS', ['test', 'second'], raising=False)
 
-        send_header_called = []
+        InterstellarClient.init_app(insanic_application)
 
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
+        service = get_service('test')
 
-            assert ":status" in dict_headers
-            assert "grpc-status" not in dict_headers
-            assert "grpc-message" not in dict_headers
-            assert "grpc-message" not in dict_headers
+        monkeypatch.setattr(service, 'host', test_server.host)
+        monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
-            assert dict_headers[':status'] == "405"
+        with service.grpc('monkey', 'ApeService') as stub:
+            request = stub.GetChimpanzee.request_type(id="1", include="sound")
 
-            send_header_called.append(True)
+            reply = await stub.GetChimpanzee(request)
 
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
+            assert reply
 
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, None, None, object)
-        assert result is None
-        assert len(send_header_called) > 0
+        assert len(caplog.records) == 1
 
-    async def test_no_method_headers_error(self, mock_h2_stream, monkeypatch):
-        headers = []
+        generic_formatter = get_formatter('generic')
 
-        send_header_called = []
+        generic_log_output = generic_formatter.format(caplog.records[0]).split()
 
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
+        # example output
+        # '[2019-11-12 22:33:50 +0900] - (interstellar.access)[INFO][127.0.0.1:59691]:
+        # GRPC http://127.0.0.1:59691/test.v1.ApeService/GetChimpanzee  200|0'
 
-            assert ":status" in dict_headers
-            assert "grpc-status" not in dict_headers
-            assert "grpc-message" not in dict_headers
-            assert "grpc-message" not in dict_headers
+        assert generic_log_output[0]
+        assert generic_log_output[3] == "-"
+        assert generic_log_output[4].startswith("(interstellar.access)[INFO][127.0.0.1")
+        assert generic_log_output[5] == "GRPC"
+        assert generic_log_output[6].endswith('/test.v1.ApeService/GetChimpanzee')
+        assert generic_log_output[-1] == "200|0"
 
-            assert dict_headers[':status'] == "405"
+        json_formatter = get_formatter('json')
 
-            send_header_called.append(True)
+        json_log_output = json.loads(json_formatter.format(caplog.records[0]))
 
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, None, None, object)
-        assert result is None
-        # assert len(send_header_called) > 0
-
-    async def test_content_type_missing_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "POST")]
-
-        send_header_called = []
-
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
-
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
-
-            assert dict_headers[':status'] == "415"
-            assert dict_headers['grpc-status'] == "2"
-            assert dict_headers['grpc-error-code'] == 999998
-
-            send_header_called.append(True)
-
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, None, None, object)
-        assert result is None
-        assert len(send_header_called) > 0
+        assert list(json_log_output.keys()) == \
+               ['correlation_id', 'environment', 'exc_text', 'grpc_status', 'hostname',
+                'insanic_version', 'level', 'message', 'method', 'name', 'path',
+                'request_service', 'service', 'service_version', 'status',
+                'stream_id', 'ts', 'where']
 
     @pytest.mark.parametrize(
-        "content_type",
-        ("application/json",
-         "application/grpc",
-         "application/grpc+",
-         "application/grpc+ape")
+        "exception_type, expected_status, expected_message",
+        (
+                ("uncaught_exception", Status.UNKNOWN, 'Internal Server Error'),
+                ("api_exception", Status.UNKNOWN, 'Internal Server Error'),
+                ("grpc_error", Status.INVALID_ARGUMENT, 'bad bad')
+        )
     )
-    async def test_content_type_invalid_error(self, mock_h2_stream, monkeypatch, content_type):
-        class MockCodec:
-            __content_subtype__ = "asd"
+    async def test_access_logging_on_error(self, insanic_application, monkeypatch, test_server,
+                                           caplog, exception_type, expected_status, expected_message):
 
-        headers = [(":method", "POST"), ("content-type", content_type)]
+        monkeypatch.setattr(settings, 'INTERSTELLAR_SERVERS', ["tests.blackhole.PlanetOfTheApes"], raising=False)
+        monkeypatch.setattr(settings, 'SERVICE_CONNECTIONS', ['test', 'second'], raising=False)
 
-        send_header_called = []
+        InterstellarClient.init_app(insanic_application)
 
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
+        service = get_service('test')
 
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
+        monkeypatch.setattr(service, 'host', test_server.host)
+        monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
-            assert dict_headers[':status'] == "415"
-            assert dict_headers['grpc-status'] == "2"
-            assert dict_headers['grpc-error-code'] == 999998
+        try:
+            with service.grpc('monkey', 'MonkeyService', 'GetMonkey') as method:
+                request = method.request_type(id=exception_type)
+                reply = await method(request)
 
-            send_header_called.append(True)
+                assert reply
+        except InterstellarError as e:
 
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
+            assert e.status == expected_status
+            assert e.message == expected_message
 
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, MockCodec(), None, object)
-        assert result is None
-        assert len(send_header_called) > 0
+            generic_formatter = get_formatter('generic')
 
-    async def test_te_missing_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "POST"), ("content-type", 'application/grpc+proto')]
-
-        send_header_called = []
-
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
-
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
-
-            assert dict_headers[':status'] == "400"
-            assert dict_headers['grpc-status'] == "2"
-            assert dict_headers['grpc-error-code'] == 999998
-
-            send_header_called.append(True)
-
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, ProtoCodec(), None, object)
-        assert result is None
-        assert len(send_header_called) > 0
-
-    async def test_te_invalid_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "POST"), ("content-type", 'application/grpc+proto'), ('te', "asda")]
-
-        send_header_called = []
-
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
-
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
-
-            assert dict_headers[':status'] == "400"
-            assert dict_headers['grpc-status'] == "2"
-            assert dict_headers['grpc-error-code'] == 999998
-
-            send_header_called.append(True)
-
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, ProtoCodec(), None, object)
-        assert result is None
-        assert len(send_header_called) > 0
-
-    async def test_path_missing_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "POST"), ("content-type", 'application/grpc+proto'),
-                   ('te', "trailers")]
-
-        send_header_called = []
-
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
-
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
-
-            assert dict_headers[':status'] == "200"
-            assert dict_headers['grpc-status'] == "12"
-            assert dict_headers['grpc-error-code'] == 999501
-
-            send_header_called.append(True)
-
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, ProtoCodec(), None, object)
-        assert result is None
-        # assert len(send_header_called) > 0
-
-    async def test_path_invalid_error(self, mock_h2_stream, monkeypatch):
-        headers = [(":method", "POST"), ("content-type", 'application/grpc+proto'),
-                   ('te', "trailers"), (':path', "asdad")]
-
-        send_header_called = []
-
-        async def mock_send_header(headers, end_stream):
-            dict_headers = dict(headers)
-
-            assert ":status" in dict_headers
-            assert "grpc-status" in dict_headers
-            assert "grpc-message" in dict_headers
-            assert "grpc-message" in dict_headers
-
-            assert dict_headers[':status'] == "200"
-            assert dict_headers['grpc-status'] == "12"
-            assert dict_headers['grpc-error-code'] == 999501
-
-            send_header_called.append(True)
-
-        monkeypatch.setattr(mock_h2_stream, 'send_headers', mock_send_header)
-
-        result = await interstellar_request_handler({}, mock_h2_stream, headers, ProtoCodec(), None, object)
-        assert result is None
-        assert len(send_header_called) > 0
+            generic_log_output_lines = generic_formatter.format(caplog.records[-1]).split('\n')
+            generic_log_output_access = generic_log_output_lines[0].split()
+            assert generic_log_output_access[-1] == f"200|{expected_status.value}"
+            # assert generic_log_output_lines[1].startswith('Traceback')
+        else:
+            assert False, "Didn't raise grpc error"

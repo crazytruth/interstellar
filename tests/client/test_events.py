@@ -55,7 +55,7 @@ class TestClientEvents:
             metadata=MultiDict()
         )
 
-        await interstellar_client_event_send_request(event)
+        await interstellar_client_event_send_request(event, "some_service")
 
         assert settings.INTERNAL_REQUEST_USER_HEADER.lower() in event.metadata
         assert event.metadata[settings.INTERNAL_REQUEST_USER_HEADER.lower()] == to_header_value(context_user())
