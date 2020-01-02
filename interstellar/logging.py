@@ -45,14 +45,14 @@ def get_handler():
     return logging.StreamHandler(sys.stdout)
 
 
-def get_queue_handler(*handlers):
-    from insanic.log.handlers import QueueListenerHandler
-    return QueueListenerHandler(handlers, queue=get_log_queue('interstellar'))
+# def get_queue_handler(*handlers):
+#     from insanic.log.handlers import QueueListenerHandler
+#     return QueueListenerHandler(handlers, queue=get_log_queue('interstellar'))
 
 
 handler = get_handler()
 handler.setFormatter(get_formatter("json" if is_docker else "generic"))
-queue_handler = get_queue_handler(handler)
+# queue_handler = get_queue_handler(handler)
 
 interstellar_access_log = logging.getLogger('interstellar.access')  # pragma: no cover
 interstellar_access_log.setLevel(get_log_level())
