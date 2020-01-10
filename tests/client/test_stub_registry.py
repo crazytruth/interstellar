@@ -13,9 +13,12 @@ class TestStubRegistry:
         registry = StubRegistry()
 
         registry.register(['grpc-test-monkey-v1'])
+        registry.register(['grpc-test-monkey-v2'])
 
         assert "test" in registry.stubs
         assert "monkey" in registry.stubs['test']
+        assert 'v1' in registry.stubs['test']['monkey']
+        assert 'v2' in registry.stubs['test']['monkey']
 
     def test_get_stub_class(self):
         registry = StubRegistry()

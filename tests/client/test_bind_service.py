@@ -45,6 +45,13 @@ class TestBindService:
             assert method
             assert isinstance(method, ServiceMethod)
 
+        with service.grpc("monkey", "v2", "ApeService") as stub:
+            assert stub
+
+        with service.grpc('monkey', "v2", 'ApeService', 'GetChimpanzee') as method:
+            assert method
+            assert isinstance(method, ServiceMethod)
+
     def test_bind_error(self):
         service = Service('test')
 
