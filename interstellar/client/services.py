@@ -1,6 +1,6 @@
 from interstellar.client.channels import ChannelPool
 
-def grpc_interface(self, namespace, stub_name, service_method_name=None, *, registry):
+def grpc_interface(self, namespace, version, stub_name, service_method_name=None, *, registry):
     if not stub_name.endswith('Stub'):
         stub_name = f"{stub_name}Stub"
 
@@ -8,6 +8,7 @@ def grpc_interface(self, namespace, stub_name, service_method_name=None, *, regi
         registry,
         self,
         namespace,
+        version,
         stub_name,
         service_method_name,
     )
@@ -15,14 +16,13 @@ def grpc_interface(self, namespace, stub_name, service_method_name=None, *, regi
 class GRPCBindContext:
     __slots__ = ('registry', 'service', 'namespace', 'stub_name', 'service_method_name', 'stub_class', 'stub',)
 
-
-    def __init__(self, registry, service: 'Service', namespace: str, stub_name: str, service_method_name: str = None):
+    def __init__(self, registry, service: 'Service', namespace: str, version: str, stub_name: str, service_method_name: str = None):
         self.registry = registry
         self.stub_name = stub_name
         self.service = service
         self.namespace = namespace
         self.service_method_name = service_method_name
-        self.stub_class = registry.get_stub(service.service_name, namespace, stub_name, service_method_name)
+        self.stub_class = registry.get_stub(service.service_name, namespace, version, stub_name, service_method_name)
 
     def __enter__(self):
         channel = ChannelPool.get_channel(self.service.service_name, self.service.host, self.service.port)

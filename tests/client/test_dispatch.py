@@ -33,13 +33,13 @@ class TestDispatch:
         monkeypatch.setattr(service, 'host', test_server.host)
         monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
-        with service.grpc('monkey', 'ApeService') as stub:
+        with service.grpc('monkey', 'v1', 'ApeService') as stub:
             request = stub.GetChimpanzee.request_type(id="1", include="sound")
 
             reply = await stub.GetChimpanzee(request)
 
             assert reply
-            assert reply.extra == "woo woo ahh ahh"
+            assert reply['extra'] == "woo woo ahh ahh"
 
     async def test_dispatch_with_service_method(self, insanic_application, monkeypatch, test_server):
         monkeypatch.setattr(settings, 'SERVICE_CONNECTIONS', ['test', 'second'], raising=False)
@@ -50,13 +50,13 @@ class TestDispatch:
         monkeypatch.setattr(service, 'host', test_server.host)
         monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
-        with service.grpc('monkey', 'ApeService', 'GetChimpanzee') as method:
+        with service.grpc('monkey', 'v1', 'ApeService', 'GetChimpanzee') as method:
             request = method.request_type(id="1", include="sound")
 
             reply = await method(request)
 
             assert reply
-            assert reply.extra == "woo woo ahh ahh"
+            assert reply['extra'] == "woo woo ahh ahh"
 
     @pytest.mark.parametrize(
         "exception_type, expected_status",
@@ -78,7 +78,7 @@ class TestDispatch:
 
         with pytest.raises(GRPCError):
             try:
-                with service.grpc('monkey', 'MonkeyService', 'GetMonkey') as method:
+                with service.grpc('monkey', 'v1', 'MonkeyService', 'GetMonkey') as method:
                     request = method.request_type(id=exception_type)
                     reply = await method(request)
             except GRPCError as e:

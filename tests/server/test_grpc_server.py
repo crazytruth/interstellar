@@ -36,7 +36,7 @@ class TestGRPCServer:
         monkeypatch.setattr(service, 'host', test_server.host)
         monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
-        with service.grpc('monkey', 'ApeService') as stub:
+        with service.grpc('monkey', 'v1', 'ApeService') as stub:
             request = stub.GetChimpanzee.request_type(id="1", include="sound")
 
             reply = await stub.GetChimpanzee(request)
@@ -92,7 +92,7 @@ class TestGRPCServer:
         monkeypatch.setattr(service, 'port', test_server.port + settings.INTERSTELLAR_SERVER_PORT_DELTA)
 
         try:
-            with service.grpc('monkey', 'MonkeyService', 'GetMonkey') as method:
+            with service.grpc('monkey', 'v1', 'MonkeyService', 'GetMonkey') as method:
                 request = method.request_type(id=exception_type)
                 reply = await method(request)
 

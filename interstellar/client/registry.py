@@ -45,15 +45,21 @@ class StubRegistry():
         :param package_name:
         :return: returns loaded package with stub_name: and method class
         """
-        prefix, service, namespace = package_name.split('-')
 
-        gp = importlib.import_module("_".join([prefix, service, namespace]))
+        package_info, version = package_name.rsplit('-', 1)
+        package_info = package_info.split('-')
+        service = package_info[1]
+        namespace = package_info[2] if len(package_info) > 2 else service
+
+        gp = importlib.import_module(package_name.replace('-', '_'))
 
         try:
             _, module = inspect.getmembers(gp, is_grpc_module)[0]
         except KeyError:
             raise RuntimeError(f'Error while loading {package_name}. '
                                f'Could not find module ending with "_grpc".')
+        except IndexError as e:
+            raise e
 
         if service not in self.stubs:
             self.stubs[service] = {}
@@ -61,19 +67,22 @@ class StubRegistry():
         if namespace not in self.stubs[service]:
             self.stubs[service][namespace] = {}
 
+        if version not in self.stubs[service][namespace]:
+            self.stubs[service][namespace][version] = {}
+
         for class_name, StubClass in inspect.getmembers(module, is_stub):
 
-            self.stubs[service][namespace].update({class_name: StubClass})
+            self.stubs[service][namespace][version].update({class_name: StubClass})
 
             for stub_name, service_method in inspect.getmembers(StubClass(None), is_service_method):
-                composite_key = (service, namespace, class_name)
+                composite_key = (service, namespace, version, class_name)
 
                 if composite_key not in self.service_methods:
                     self.service_methods[composite_key] = []
 
                 self.service_methods[composite_key].append(stub_name)
 
-    def get_stub(self, service_name: str, namespace: str, stub_name: str, service_method_name: str = None):
+    def get_stub(self, service_name: str, namespace: str, version: str, stub_name: str, service_method_name: str = None):
         """
 
         :param service_name:
@@ -91,13 +100,18 @@ class StubRegistry():
         if not stub_name.endswith('Stub'):
             stub_name = f"{stub_name}Stub"
 
-        if not stub_name in self.stubs[service_name][namespace]:
+        if not version in self.stubs[service_name][namespace]:
+            package_name = f"grpc-{service_name}{f'-{namespace}' if service_name!=namespace else ''}"
+            raise ImproperlyConfigured(f"Version does not exist for {package_name}. "
+                                       f"Please check the protobuf definition.")
+
+        if not stub_name in self.stubs[service_name][namespace][version]:
             raise ImproperlyConfigured(f"Stub, {stub_name}, does not exist for grpc-{service_name}-{namespace}."
                                        f"Please check the protobuf definition.")
 
         if service_method_name is not None:
-            if service_method_name not in self.service_methods[(service_name, namespace, stub_name)]:
+            if service_method_name not in self.service_methods[(service_name, namespace, version, stub_name)]:
                 raise ImproperlyConfigured(f"Service Method does not exist for stub, {stub_name}. "
                                            f"Please check the protobuf definition.")
 
-        return self.stubs[service_name][namespace][stub_name]
+        return self.stubs[service_name][namespace][version][stub_name]

@@ -4,8 +4,8 @@ from insanic.exceptions import APIException
 
 from interstellar.exceptions import InvalidArgumentError
 
-from grpc_test_monkey.monkey_grpc import ApeServiceBase, MonkeyServiceBase
-from grpc_test_monkey.monkey_pb2 import ApeResponse, MonkeyResponse
+from grpc_test_monkey_v1.monkey_grpc import ApeServiceBase, MonkeyServiceBase
+from grpc_test_monkey_v1.monkey_pb2 import ApeResponse, MonkeyResponse
 
 
 class PlanetOfTheApes(ApeServiceBase):

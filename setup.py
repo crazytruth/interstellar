@@ -25,7 +25,7 @@ setup_requirements = ['pytest-runner', ]
 
 test_requirements = [
     'pytest',
-    'grpc-test-monkey',
+    'grpc-test-monkey-v1',
     "coverage",
     "pytest-cov",
     "pytest-sanic",

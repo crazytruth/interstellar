@@ -1,4 +1,5 @@
 import random
+from functools import wraps
 
 from typing import Optional, Type, Dict
 
@@ -11,6 +12,10 @@ from grpclib.metadata import Deadline, _MetadataLike, _Metadata
 from insanic.conf import settings
 from interstellar.client.events import attach_events
 from interstellar.exceptions import InterstellarError
+
+from google.protobuf.descriptor import FieldDescriptor
+from google.protobuf.message import Message
+import time
 
 
 class ChannelPool:
@@ -32,6 +37,42 @@ class ChannelPool:
         cls.channels = {}
 
 
+def convert_message_to_dict(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        def get_json_response_from_protobuf_message(message):
+            """
+
+            :param message: protobuf message object
+            :type message: Message
+            :return: dict
+            """
+
+            if not isinstance(message, Message):
+                # TODO: discuss which one is better between None and empty dict. or raise error?
+                return None
+
+            converted_data = {}
+            for item in dir(message):
+                field = getattr(type(message), item)
+                if hasattr(field, 'DESCRIPTOR') and isinstance(field.DESCRIPTOR, FieldDescriptor):
+                    attribute = getattr(message, field.DESCRIPTOR.name)
+
+                    if not isinstance(attribute, Message):
+                        converted_data[item] = attribute
+                    else:
+                        converted_data[item] = get_json_response_from_protobuf_message(attribute)
+
+            return converted_data
+
+        reslut = await func(*args, **kwargs)
+        start = time.time()
+        result = get_json_response_from_protobuf_message(reslut)
+        print(time.time() - start)
+        return result
+    return wrapper
+
+
 class InterstellarStream(Stream):
 
     async def recv_initial_metadata(self) -> None:
@@ -49,6 +90,10 @@ class InterstellarStream(Stream):
             super()._raise_for_grpc_status(headers_map)
         except GRPCError as e:
             raise InterstellarError(status=e.status, message=e.message)
+
+    @convert_message_to_dict
+    async def recv_message(self):
+        return await super().recv_message()
 
 
 class InterstellarChannel(Channel):
