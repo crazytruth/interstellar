@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-version = '0.1.1.dev0'
+version = '0.1.1'
 
 requirements = [
     'insanic>=0.8.3',
