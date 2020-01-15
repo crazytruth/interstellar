@@ -5,7 +5,8 @@ History
 0.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+* CHORE: removes unused queue handler
+* MAJOR: added a version to the package name to register multiple versions of the same grpc package
 
 
 0.1.0 (2019-07-16)

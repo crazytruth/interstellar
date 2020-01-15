@@ -66,7 +66,7 @@ Our [protobuf](https://github.com/MyMusicTaste/mmt-msa-protobuf) repository hold
 Please read up on the protobuf repo readme on how it works.
 
 Once you have selected the grpc methods you will be using, we need to install the grpc packages.
-In our example, we will be using `grpc-test-monkey`. (i.e. `$ pip install grpc-test-monkey`)
+In our example, we will be using `grpc-test-monkey-v1`. (i.e. `$ pip install grpc-test-monkey-v1`)
 
 1. A couple things to note is that interstellar will be looking through all installed packages for the prefix `grpc-`
 
@@ -75,10 +75,12 @@ These service methods will be bound to the `service` object.
 
 3. The third (i.e. "monkey") is the namespace. More on this later.
 
-4. Another thing to note, but not needed at this point in time, is the actual `Stub` and `ServiceMethod` within the package
+4. The last one (i.e. "v1") is the version.
+
+5. Another thing to note, but not needed at this point in time, is the actual `Stub` and `ServiceMethod` within the package
 that you will need to know the name of.
 
-5. The same package will be used for both the client side and server side services, but these protobuf files will
+6. The same package will be used for both the client side and server side services, but these protobuf files will
 probably be created by the server side developer.
 
 
@@ -131,7 +133,7 @@ we can now go ahead and use the provided interface for dispatching requests.
 
     service = get_service('test')
 
-    with service.grpc("monkey", "ApeService", "GetChimpanzee") as method:
+    with service.grpc("monkey", "v1", "ApeService", "GetChimpanzee") as method:
         request = method.request_type(id='1', include="sound")
         reply = await method(request)
 
@@ -139,7 +141,7 @@ we can now go ahead and use the provided interface for dispatching requests.
 
     # or we can also use the stubs if there are different methods we want to use
 
-    with service.grpc("monkey", "ApeService") as stub:
+    with service.grpc("monkey", "v1", "ApeService") as stub:
         chimpanzee_request = stub.GetChimpanzee.request_type(id="1", include="sound")
         chimpanzee_task = stub.GetChimpanzee(chimpanzee_request)
 
@@ -153,16 +155,18 @@ A couple things to note in this example.
 
 1. "monkey" is the namespace as defined in `grpc-test-monkey`. (i.e. last word in package name)
 
-2. "ApeService" is the generated Stub class. Refer to either protobuf file/service definition or your friendly grpc
+2. "v1" is the version of grpc package.
+
+3. "ApeService" is the generated Stub class. Refer to either protobuf file/service definition or your friendly grpc
 documentation
 
-3. "GetChimpanzee" is the service method defined in the Stub. Again refer to documentation or protobuf file.
+4. "GetChimpanzee" is the service method defined in the Stub. Again refer to documentation or protobuf file.
 
-4. Each eventual service method (either as an attribute of the stub, or from the context manager) will have
+5. Each eventual service method (either as an attribute of the stub, or from the context manager) will have
 a `request_type` attribute. This is the actual object you will need to create as defined in the service definition
 and will be sent in the actual request.
 
-5. If no issues arise, you will get a reply with the reply object, in which you can access the fields as attributes.
+6. If no issues arise, you will get a reply with the reply object, in which you can access the fields as attributes.
 
 
 Interstellar Server
@@ -180,7 +184,7 @@ example.
 
 .. code-block:: bash
 
-    $ pip install grpc-test-monkey
+    $ pip install grpc-test-monkey-v1
 
 2. Now, you need to create the actual handler that will handle the request.
 
@@ -188,7 +192,7 @@ example.
 
     # somewhere.py maybe handlers.py?
 
-    from grpc_test_monkey.monkey_grpc import ApeServiceBase
+    from grpc_test_monkey.monkey_grpc_v1 import ApeServiceBase
 
     class ApeService(ApeServiceBase):
 
