@@ -1,3 +1,5 @@
+import os
+
 from interstellar.client.channels import ChannelPool
 
 def grpc_interface(self, namespace, version, stub_name, service_method_name=None, *, registry):
@@ -25,7 +27,9 @@ class GRPCBindContext:
         self.stub_class = registry.get_stub(service.service_name, namespace, version, stub_name, service_method_name)
 
     def __enter__(self):
-        channel = ChannelPool.get_channel(self.service.service_name, self.service.host, self.service.port)
+        host = "0.0.0.0" if os.environ.get('MMT_ENV') == 'local' else self.service.host
+        port = self.service.port + 1000
+        channel = ChannelPool.get_channel(self.service.service_name, host, port)
 
         self.stub = self.stub_class(channel)
 
